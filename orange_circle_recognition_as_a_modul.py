@@ -28,10 +28,18 @@ def object_detection():
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     #masking those image
+    #orange circle in lab
     #lower = np.array([0,50,144])
     #upper = np.array([20,220,180])
-    lower = np.array([0,50,70])
-    upper = np.array([13,230,220])
+    #orange circle in kontrakan
+    #lower = np.array([0,50,70])
+    #upper = np.array([13,230,220])
+    #pink circle
+    lower = np.array([140,60,120])
+    upper = np.array([179,255,255])
+    #pink circle 2
+    lower = np.array([160,70,140])
+    upper = np.array([179,255,255])
     mask = cv2.inRange(img_hsv, lower, upper)
     print "[Mask Image] dimension : {}, number of channel : {}".format(mask.shape, mask.ndim)
 
