@@ -19,4 +19,4 @@ while 1:
 #release video capture
 cap.release()
 #close all windows
-cv2.closeAllWindows()
+cv2.destroyAllWindows()
