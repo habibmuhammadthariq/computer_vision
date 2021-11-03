@@ -1,10 +1,6 @@
 import cv2
 import numpy as np
 
-    #def __init__(self):
-#global cap
-#global img
-#img = None
 cap = cv2.VideoCapture(0)# + cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FPS, 10)
 fps = int(cap.get(5))
@@ -20,6 +16,23 @@ def centroid_frame():
     #returning centroid of this frame
     return cx,cy
 
+def find_marker(image):
+    #convert RGB image into hsv color space
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    #blue circle
+    lower = np.array([90,60,80])
+    upper = np.array([110,255,255])
+    mask = cv2.inRange(img_hsv, lower, upper)
+
+    #find contours
+    image, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    #merge all contours found
+    #contours = np.vstack(contours)
+    c = max(contours, key=cv2.contourArea)
+
+    return cv2.minAreaRect(c)
+
 def finding_object():
     #start streaming
     global img
@@ -28,19 +41,6 @@ def finding_object():
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     #masking those image
-    #orange circle in lab
-    #lower = np.array([0,50,144])
-    #upper = np.array([20,220,180])
-    #orange circle in kontrakan
-    #lower = np.array([0,50,70])
-    #upper = np.array([13,230,220])
-    #pink circle
-    #lower = np.array([140,60,120])
-    #upper = np.array([179,255,255])
-    #pink circle 2
-    #lower = np.array([160,70,140])
-    #upper = np.array([179,255,255])
-    #blue circle
     lower = np.array([90,60,80])
     upper = np.array([110,255,255])
     mask = cv2.inRange(img_hsv, lower, upper)
@@ -59,9 +59,9 @@ def centroid_image_v2(contours):
     #get the biggest contours
     cnt = max(contours, key=cv2.contourArea)
     #draw contours
-    cv2.drawContours(img, contour, -1, (0,255,0), 3)
+    cv2.drawContours(img, cnt, -1, (0,255,0), 3)
     #find x and y coordinate, width and height of that contour
-    x,y,w,h = cv2.boundingRect(contour)
+    x,y,w,h = cv2.boundingRect(cnt)
     #draw rectangle to that contour
     cv2.rectangle(img, (x,y), (x+w,y+h), (255,0,0), 2)
     #calculate centroid of that contour
@@ -111,7 +111,6 @@ def detail_object(contours):
     #this will return (center(x,y), (width, height), angle of rotation)
     return cv2.minAreaRect(cnt)
     
-
 def finding_focalLength():
     #initialize the known distance from the camera to the marker
     known_distance = 50    
@@ -119,7 +118,9 @@ def finding_focalLength():
     known_width = 19.5
 
     #load image that have known distance 50 cm and known width of marker 19.5 cm
+    #image = raw_input("Input image directory and name + extension : ")
     image = cv2.imread("img/circle_marker.jpg")
+    #finding marker on that image
     marker = find_marker(image)
     focalLength = (marker[1][0]*known_distance) / known_width
 
