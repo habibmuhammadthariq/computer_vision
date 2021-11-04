@@ -10,22 +10,23 @@ def centroid_frame():
     (h,w) = img.shape[:2]
     cx = w//2
     cy = h//2
-    #draw solid circle on that centroid
+
+    #draw solid circle on the centroid frame
     cv2.circle(img, (cx,cy), 7, (255,255,255), -1) 
 
     #returning centroid of this frame
     return cx,cy
 
 def find_marker(image):
-    #convert RGB image into hsv color space
+    #RGB to HSV
     img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    #blue circle
+    #range value of blue color 
     lower = np.array([90,60,80])
     upper = np.array([110,255,255])
     mask = cv2.inRange(img_hsv, lower, upper)
 
-    #find contours
+    #finding contours
     image, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     #merge all contours found
     #contours = np.vstack(contours)
@@ -37,44 +38,57 @@ def finding_object():
     #start streaming
     global img
     _, img = cap.read()
-    #RGB to HSV format
+    #RGB to HSV 
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    #masking those image
+    ##range value of blue color 
     lower = np.array([90,60,80])
     upper = np.array([110,255,255])
+    #masking image
     mask = cv2.inRange(img_hsv, lower, upper)
+    #print out detail of masked image
     print "[Mask Image] dimension : {}, number of channel : {}".format(mask.shape, mask.ndim)
 
     #find contours
     image, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     print "Number of contours found : {}".format(len(contours))
+    #get the biggest contours
+    #contours = max(contours, key=cv2.contourArea)
 
     return contours
 
 def centroid_image_v2(contours):
-    #Initializie  x and y coordinate of detected object center
+    #You have to use this in case of you wanna get the centroid of the biggest contours found
+
+    #Initializie variable for the centroid image
     cx = 0
     cy = 0
-    #get the biggest contours
-    cnt = max(contours, key=cv2.contourArea)
-    #draw contours
-    cv2.drawContours(img, cnt, -1, (0,255,0), 3)
-    #find x and y coordinate, width and height of that contour
-    x,y,w,h = cv2.boundingRect(cnt)
-    #draw rectangle to that contour
-    cv2.rectangle(img, (x,y), (x+w,y+h), (255,0,0), 2)
-    #calculate centroid of that contour
-    cx = x + w//2
-    cy = y + h//2
-    #draw solid circle on that centroid
-    cv2.circle(img, (cx,cy), 7, (0,255,0), -1)
-    #put text above those solid circle
-    cv2.putText(img, "object centroid", (cx-20,cy-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
 
-    return cx,cy
+    if len(contours) > 0: 
+        #get the biggest contours
+        cnt = max(contours, key=cv2.contourArea)
+        #draw contours
+        cv2.drawContours(img, cnt, -1, (0,255,0), 3)
+
+        #find x and y coordinate, width and height of that contour
+        x,y,w,h = cv2.boundingRect(cnt)
+        #draw rectangle
+        cv2.rectangle(img, (x,y), (x+w,y+h), (255,0,0), 2)
+
+        #calculate centroid of the contour with cv2.moments
+        M = cv2.moments(cnt)
+        cx = int(M["m10"] / M["m00"])
+        cy = int(M["m01"] / M["m00"])
+        #draw solid circle on that centroid
+        cv2.circle(img, (cx,cy), 7, (0,255,0), -1)
+        #put text above those solid circle
+        cv2.putText(img, "object centroid", (cx-20,cy-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+
+        return cx,cy
 
 def centroid_image(contours):
+    #You have to use this in case of you wanna merge all of contours found then get the centroid
+
     #Initializie  x and y coordinate of detected object center
     cx = 0
     cy = 0
@@ -96,18 +110,23 @@ def centroid_image(contours):
         #put text above those solid circle
         cv2.putText(img, "object centroid", (cx-20,cy-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
 
-    return cx,cy
+        return cx,cy
 
 def distance_to_camera(knownWidth, focalLength, perWidth):
     #compute and return the distance from the marker to the camera
     return (knownWidth*focalLength)/perWidth
     
-def detail_object(contours):
-    #today, this method just work well if we are using centroid_image_v2 method 
-    #insted of centroid_image
+def detail_object(contours, contour_type):
+    #contour_type == 'merge' mean that we are using centroid_image() methode 
+    #instead of centroid_image_v2()
 
-    #get the biggest contours
-    cnt = max(contours, key=cv2.contourArea)
+    if contour_type == "merged":
+        #merge the all contours
+        cnt = np.vstack(contours)
+    else:
+        #get the biggest contour
+        cnt = max(contours, key=cv2.contourArea)
+
     #this will return (center(x,y), (width, height), angle of rotation)
     return cv2.minAreaRect(cnt)
     
@@ -120,6 +139,7 @@ def finding_focalLength():
     #load image that have known distance 50 cm and known width of marker 19.5 cm
     #image = raw_input("Input image directory and name + extension : ")
     image = cv2.imread("img/circle_marker.jpg")
+
     #finding marker on that image
     marker = find_marker(image)
     focalLength = (marker[1][0]*known_distance) / known_width

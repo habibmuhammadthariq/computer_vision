@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 
 class Ball_detection:
-    #def __init__(self):
+    #define cap variable as global, so that we can access it every where in this file
     global cap
-    cap = cv2.VideoCapture(0)# + cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FPS, 10)
     fps = int(cap.get(5))
     print("Fps : ", fps)
@@ -13,7 +13,7 @@ class Ball_detection:
         (h,w) = img.shape[:2]
         cx = w//2
         cy = h//2
-        #draw solid circle on that centroid
+        #draw solid circle on the centroid
         cv2.circle(img, (cx,cy), 7, (255,255,255), -1) 
 
         #returning centroid of this frame
@@ -27,8 +27,6 @@ class Ball_detection:
         img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         #masking those image
-        #lower = np.array([0,50,144])
-        #upper = np.array([20,220,180])
         lower = np.array([0,50,70])
         upper = np.array([13,230,220])
         mask = cv2.inRange(img_hsv, lower, upper)
@@ -47,10 +45,12 @@ class Ball_detection:
             contour = np.vstack(contours)
             #draw contours
             cv2.drawContours(img, contour, -1, (0,255,0), 3)
+
             #find x and y coordinate, width and height of that contour
             x,y,w,h = cv2.boundingRect(contour)
             #draw rectangle to that contour
             cv2.rectangle(img, (x,y), (x+w,y+h), (255,0,0), 2)
+
             #calculate centroid of that contour
             cx = x + w//2
             cy = y + h//2
@@ -58,9 +58,6 @@ class Ball_detection:
             cv2.circle(img, (cx,cy), 7, (0,255,0), -1)
             #put text above those solid circle
             cv2.putText(img, "object centroid", (cx-20,cy-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
-    
-        #displaying the result in original image
-        #cv2.imshow("Result", img)
 
         #returning centroid of detected object
         return cx,cy
@@ -72,13 +69,15 @@ class Ball_detection:
         cv2.destroyAllWindows()
 
 while 1:
-    ball = Ball_detection()
-    cx_img, cy_img = ball.object_detection()
-    cx_frame, cy_frame = ball.centroid_frame()
+    #initialize class ball_detection as an object
+    orange_color = Ball_detection()
+    #get the centroid of the image and frame
+    cx_img, cy_img = orange_color.object_detection()
+    cx_frame, cy_frame = orange_color.centroid_frame()
 
-    print "cX and cY image : {},{} - cX and cY frame : {},{}".format(cx_img,cy_img,cx_frm,cy_frm)
+    print "cX and cY image : {},{} - cX and cY frame : {},{}".format(cx_img,cy_img,cx_frame,cy_frame)
     #draw line from centroid image into centroid frame
-    cv2.line(img, (cx_img,cy_img), (cx_frm,cy_frm), (255,255,255), 4)
+    cv2.line(img, (cx_img,cy_img), (cx_frame,cy_frame), (255,255,255), 4)
     
     #displaying the result in original image
     cv2.imshow("Result 2", img)
@@ -86,5 +85,5 @@ while 1:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     
-ball.destroy()
+orange_color.destroy()
 

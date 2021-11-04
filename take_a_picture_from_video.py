@@ -6,7 +6,8 @@ while 1:
     #start streaming
     _, img = cap.read()
 
-    #take a picture
+    #take a picture on every single loop. 
+    #the end of the video will be our final picture
     cv2.imwrite("img/circle.jpg", img)
 
     #show image streaming in a window
