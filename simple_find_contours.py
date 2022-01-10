@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 15)
+cap.set(cv2.CAP_PROP_FPS, 5)
 fps = cap.get(5)
 print("Frame Per Second : {}".format(fps))
 
@@ -16,7 +16,11 @@ def find_contours(image):
     canny = cv2.Canny(blur, 75, 100)
 
     # find contours
-    cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # in windows
+    _, cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #in linux
+    #cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
 
     # get the biggest 5
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:8]
@@ -63,6 +67,7 @@ def find_contours(image):
 
 while True:
     ret, frame = cap.read()
+    frame = cv2.flip(frame, 1)
 
     if not ret:
         break
@@ -78,7 +83,8 @@ while True:
     i = 0
     for c in contours:
         i=i+1
-    #    print("cx and cy number {} : {},{} ".format(i,cx[i-1],cy[i-1]))
+        print("cx and cy number {} : {},{} <-> luas : {} ".format(i,cx[i-1],cy[i-1], cv2.contourArea(c)))
+    print("\n")
 
     drawing = np.zeros((canny.shape[0], canny.shape[1], 3), dtype=np.uint8)
     for i in range(len(contours)):
