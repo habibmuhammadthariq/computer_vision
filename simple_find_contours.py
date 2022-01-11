@@ -17,10 +17,9 @@ def find_contours(image):
 
     # find contours
     # in windows
-    _, cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #in linux
-    #cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+    cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # in linux
+    # cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # get the biggest 5
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:8]
@@ -41,15 +40,15 @@ def find_contours(image):
         if len(approx) == 4:
             # add contour
             contours.append(c)
-            #get the detail of the contour
+            # get the detail of the contour
             box = cv2.boundingRect(c)
             x.append(box[0])
             y.append(box[1])
             w.append(box[2])
             h.append(box[3])
             # get center x and y of the contour
-            cx.append(box[0] + (box[2]/2)) # x + (w/2)
-            cy.append(box[1] + (box[3]/2)) # y + (h/2)
+            cx.append(box[0] + (box[2] / 2))  # x + (w/2)
+            cy.append(box[1] + (box[3] / 2))  # y + (h/2)
             # we can stop the loop using "break" command or
             # just loop over every single contours in case of there are more than one quadrilateral contour
 
@@ -64,6 +63,36 @@ def find_contours(image):
     # show the result up
     # cv2.imshow('Contours', drawing)
 
+def get_appropriate_contour(cnts, x, y, w, h, cx, cy):
+    contours = []
+    temp = 0
+
+    for c in cnts:
+        if temp is None:
+            contours.append(c)
+            temp = cv2.contourArea(c)
+            continue
+
+        if temp-10 <= cv2.contourArea(c) <= temp+10:
+            contours.append(c)
+        # if (cx[temp] - 10 < cx[i] < cx[temp] + 10) or (cy[temp] - 10 < cy[i] < cy[temp] + 10):
+        #    contours.append(c)
+    x1 = 0
+    x2 = 0
+    y1 = 0
+    y2 = 0
+    for c in contours:
+        x, y, w, h = cv2.boundingRect(c)
+        if x1 == 0 and y1 == 0:
+            x1 = x
+            y1 = y
+
+        if x1 < x or y1 < x:
+            x2 = x
+            y2 = y
+
+    return x1, y1, x2, y2
+
 
 while True:
     ret, frame = cap.read()
@@ -77,18 +106,20 @@ while True:
     cv2.namedWindow(source_window)
     cv2.imshow(source_window, frame)
 
-    # get contours from image then show it up
+    # get contours from image
     (contours, hierarchy, x, y, w, h, cx, cy, canny) = find_contours(frame)
+    # get appropriate contours
+    x1, y1, x2, y2 = get_appropriate_contour(contours, x, y, w, h, cx, cy)
 
-    i = 0
-    for c in contours:
-        i=i+1
-        print("cx and cy number {} : {},{} <-> luas : {} ".format(i,cx[i-1],cy[i-1], cv2.contourArea(c)))
-    print("\n")
+    # original image with rectangle
+    ori = frame.copy()
+    ori = cv2.rectangle(ori, (x1,y1), (x2,y2), (0,255,0), 2)
+    cv2.imshow("Original image with rectangle", ori)
 
+    # biner image
     drawing = np.zeros((canny.shape[0], canny.shape[1], 3), dtype=np.uint8)
     for i in range(len(contours)):
-        cv2.drawContours(drawing, contours, i, (0,255,0), 2, cv2.LINE_8, hierarchy, 0 )
+        cv2.drawContours(drawing, contours, i, (0, 255, 0), 2, cv2.LINE_8, hierarchy, 0)
 
     cv2.imshow("Result", drawing)
 
