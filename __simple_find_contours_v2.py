@@ -1,4 +1,5 @@
 import cv2
+from matplotlib.pyplot import contour
 import numpy as np
 
 cap = cv2.VideoCapture(0)
@@ -9,11 +10,12 @@ print("Frame Per Second : {}".format(fps))
 
 def find_contours(image):
     # convert image into gray and blur it
-    blur = cv2.GaussianBlur(image, (3, 3), cv2.BORDER_DEFAULT)
-    gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bilateralFilter(gray, 11, 17, 17)
+    blur = cv2.GaussianBlur(gray, (3, 3), cv2.BORDER_DEFAULT)
 
     # detect edge
-    canny = cv2.Canny(gray, 100, 200)
+    canny = cv2.Canny(blur, 30, 200)
 
     kernel = np.ones((3,3), np.uint8)
     # dilation = cv2.
@@ -23,7 +25,7 @@ def find_contours(image):
     cnts, hier = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # get the biggest 8
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:8]
+    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)# [:8]
 
     contours = []
     cx = []
@@ -36,14 +38,16 @@ def find_contours(image):
         # get the quadrilateral contour. quadrilateral -> berbentuk persegi empat
         if len(approx) == 4:
             # add contour
-            contours.append(c)
+            # contours.append(c)
+            contours.append(approx)
             # get tcenter of the contour
-            M = cv2.moments(c)
+            # M = cv2.moments(c)
+            M = cv2.moments(approx)
             if M["m00"] == 0: M["m00", "m01"] = 1
             cx.append(int(M["m10"] / M["m00"]))
             cy.append(int(M["m01"] / M["m00"]))
 
-    return contours, hier, cx, cy, canny
+    return contours, cx, cy, canny
 
 
 def get_contours_detail(cnts):
@@ -184,7 +188,7 @@ while True:
         break
 
     # get contours from image then show it up
-    (contours, hierarchy, cx, cy, canny) = find_contours(frame)
+    (contours, cx, cy, canny) = find_contours(frame)
 
     # draw contours found
     drawing = np.zeros((canny.shape[0], canny.shape[1], 3), dtype=np.uint8)
