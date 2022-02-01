@@ -9,7 +9,7 @@ while 1:
         #get centroid of the object and frame
         cx_img, cy_img = modul.centroid_image_v2(marker)
         cx_frm, cy_frm = modul.centroid_frame()
-        print "cX and cY image : {},{} - cX and cY frame : {},{}".format(cx_img,cy_img,cx_frm,cy_frm)
+        print ("cX and cY image : {},{} - cX and cY frame : {},{}".format(cx_img,cy_img,cx_frm,cy_frm))
     
         #draw line from centroid image into centroid frame
         cv2.line(modul.img, (cx_img,cy_img), (cx_frm,cy_frm), (255,255,255), 4)

@@ -95,19 +95,31 @@ def get_box(center1, center2, contour1, contour2):
     else:
         left = center2[0]-peri2, center2[1]+peri2
         right = center1[0]+peri1, center1[1]-peri1
-    
+
     qr_center = int(left[0] + math.fabs(right[0]-left[0])/2), int(left[1] - math.fabs(left[1]-right[1])/2)
 
     return [left, right, qr_center]
 
 
+def distance_to_camera(per_width):
+    # distance = 40 cm, known width = 15.8 cm, width in image = 265
+    # initialize focal length
+    focal_length = 670.8860759493671 # in laptop camera
+    # initialize the real known width
+    known_width = 15.8  # cm
+
+    return (known_width*focal_length)/per_width
+
+
 def get_direction(image, contour):
     direction = ""
-    if (contour[0] < image[0]):
+    if image[0]-50 < contour[0] < image[0]+50:
+        direction = "hover"
+    elif contour[0] < image[0]:
         direction = "kiri"
     else:
         direction = "kanan"
-    
+
     return direction
 
 
@@ -208,6 +220,7 @@ def extract(frame, debug=False):
                 east_corners.append(east)
                 south_corners.append(south)
                 main_corners.append(square)
+                # print a text
                 cv2.putText(output, "Main", main_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
                 cv2.putText(output, "East", east_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
                 cv2.putText(output, "South", south_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
@@ -215,6 +228,8 @@ def extract(frame, debug=False):
                 cv2.rectangle(output, left, right, (255,255,255), 2)
                 cv2.circle(output, qr_center, 10, (255,255,255), cv2.FILLED)
                 cv2.putText(output, "Center", qr_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
+
+                print("Width : {}, height : {}".format(math.fabs(left[0]-right[0]), math.fabs(left[1]-right[1])))
 
                 # get direction for the drone
                 direction = get_direction(center_image, qr_center)
@@ -230,3 +245,15 @@ def extract(frame, debug=False):
         cv2.drawContours(output, south_corners, -1, (128, 0, 0), 3)
 
     return output
+
+"""
+# note
+
+get_direction bagian x, blum menggunakan yang pembagian sbgaimana pada modul ini. toleransinya masih 50 bukan 0. ...
+
+another option to create rectangle over qr codes:
+rect = cv2.minAreaRect()
+box = cv2.cv.boxPoints(rect)
+box = np.int0(box)
+cv2.drawContours(image, [box], 0, (color), thickness)
+"""
