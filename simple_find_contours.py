@@ -10,14 +10,17 @@ DISTANCE_TOLERANCE = 0.25
 WARP_DIM = 300
 SMALL_DIM = 29
 
+# global variable
+# global qr_center, image_center
+
 
 def count_children(hierarchy, parent, inner=False):
     if parent == -1:
         return 0
     elif not inner:
         return count_children(hierarchy, hierarchy[parent][2], True)
-    return 1 + count_children(hierarchy, hierarchy[parent][0], True) + count_children(hierarchy, hierarchy[parent][2], True)
-
+    return 1 + count_children(hierarchy, hierarchy[parent][0], True) + count_children(hierarchy, hierarchy[parent][2],
+                                                                                      True)
 
 def has_square_parent(hierarchy, squares, parent):
     if hierarchy[parent][3] == -1:
@@ -84,51 +87,67 @@ def extend(a, b, length, int_represent=False):
 
 
 def get_box(center1, center2, contour1, contour2):
-    peri1 = int(cv2.arcLength(contour1, True)/4/2)
-    peri2 = int(cv2.arcLength(contour2, True)/4/2)
+    peri1 = int(cv2.arcLength(contour1, True) / 4 / 2)
+    peri2 = int(cv2.arcLength(contour2, True) / 4 / 2)
     center1 = int(center1[0]), int(center1[1])
     center2 = int(center2[0]), int(center2[1])
 
     if center1[0] < center2[0] and center1[1] > center2[1]:
-        left = center1[0]-peri1, center1[1]+peri1
-        right = center2[0]+peri2, center2[1]-peri2
+        left = center1[0] - peri1, center1[1] + peri1
+        right = center2[0] + peri2, center2[1] - peri2
     else:
-        left = center2[0]-peri2, center2[1]+peri2
-        right = center1[0]+peri1, center1[1]-peri1
+        left = center2[0] - peri2, center2[1] + peri2
+        right = center1[0] + peri1, center1[1] - peri1
 
-    qr_center = int(left[0] + math.fabs(right[0]-left[0])/2), int(left[1] - math.fabs(left[1]-right[1])/2)
+    qr_cnter = int(left[0] + math.fabs(right[0] - left[0]) / 2), int(left[1] - math.fabs(left[1] - right[1]) / 2)
 
-    return [left, right, qr_center]
+    return [left, right, qr_cnter]
 
 
-def distance_to_camera(per_width):
+def distance_to_camera():
     # distance = 40 cm, known width = 15.8 cm, width in image = 265
     # initialize focal length
-    focal_length = 670.8860759493671 # in laptop camera
+    focal_length = 670.8860759493671  # in laptop camera
     # initialize the real known width
     known_width = 15.8  # cm
 
-    return (known_width*focal_length)/per_width
+    return (known_width * focal_length) / contour_width
 
 
-def get_direction(image, contour):
+def get_direction(): # this function need both image_center and qr_center
     direction = ""
-    if image[0]-50 < contour[0] < image[0]+50:
-        direction = "hover"
-    elif contour[0] < image[0]:
-        direction = "kiri"
-    else:
-        direction = "kanan"
+    distance = distance_to_camera()
+    # print("distance : %s" % distance)
 
-    return direction
+    if distance > 80:
+        direction = "forward"
+    elif distance < 30:
+        direction = "landing"
+    else:
+        # if image_center[0] - 50 < qr_center[0] < image_center[0] + 50 \
+        #         and image_center[1] - 50 < qr_center[1] < image_center[1] + 50:
+            # direction = "hover" # or forward
+        if image_center[0] > qr_center[0] + 50:
+            direction = "left"
+        elif image_center[0] < qr_center[0] - 50:
+            direction = "right"
+        elif image_center[1] > qr_center[1] + 50:
+            direction = "down"
+        elif image_center[1] < qr_center[1] - 50:
+            direction = "up"
+        else:
+            direction = "hover"
+
+    return direction, distance
 
 
 def extract(frame, debug=False):
     output = frame.copy()
     # get center image and draw solid circle at it
+    global image_center
     height, width, channel = output.shape
-    center_image = int(width/2), int(height/2)
-    cv2.circle(output, center_image, 5, (0,255,255), cv2.FILLED)
+    image_center = int(width / 2), int(height / 2)
+    cv2.circle(output, image_center, 5, (0, 255, 255), cv2.FILLED)
 
     # Remove noise and unnecessary contours from frame
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -142,6 +161,7 @@ def extract(frame, debug=False):
     square_indices = []
 
     i = 0
+    detected = False # true if the contour get caught
     for c in contours:
         # Approximate the contour
         peri = cv2.arcLength(c, True)
@@ -151,7 +171,10 @@ def extract(frame, debug=False):
         # Find all quadrilateral contours
         if len(approx) == 4:
             # Determine if quadrilateral is a square to within SQUARE_TOLERANCE
-            if area > 25 and 1 - SQUARE_TOLERANCE < math.fabs((peri / 4) ** 2) / area < 1 + SQUARE_TOLERANCE and count_children(hierarchy[0], i) >= 2 and has_square_parent(hierarchy[0], square_indices, i) is False:
+            if area > 25 and 1 - SQUARE_TOLERANCE < math.fabs(
+                    (peri / 4) ** 2) / area < 1 + SQUARE_TOLERANCE and count_children(hierarchy[0],
+                                                                                      i) >= 2 and has_square_parent(
+                    hierarchy[0], square_indices, i) is False:
                 squares.append(approx)
                 square_indices.append(i)
         i += 1
@@ -164,21 +187,22 @@ def extract(frame, debug=False):
     for square in squares:
         area = cv2.contourArea(square)
         center = get_center(square)
-        peri = cv2.arcLength(square, True)  #keliling objek
-        
+        peri = cv2.arcLength(square, True)  # keliling objek
+
         similar = []
         tiny = []
         for other in squares:
-            if square[0][0][0] != other[0][0][0]:   # bentuk lain dari indeks di dalam kontur
+            if square[0][0][0] != other[0][0][0]:  # bentuk lain dari indeks di dalam kontur
                 # Determine if square is similar to other square within AREA_TOLERANCE
                 if math.fabs(area - cv2.contourArea(other)) / max(area, cv2.contourArea(other)) <= AREA_TOLERANCE:
                     similar.append(other)
                 elif peri / 4 / 2 > cv2.arcLength(other, True) / 4:
                     tiny.append(other)
-                
+
                 # math.fabs -> selisih. area_tolerance -> 0.15
 
         if len(similar) >= 2:
+            detected = True # contour get caught
             distances = []
             distances_to_contours = {}
             for sim in similar:
@@ -188,11 +212,12 @@ def extract(frame, debug=False):
                 distances_to_contours[d] = sim
                 # math.hypot -> jarak dari dua titik koordinat
             distances = sorted(distances)
-            closest_a = distances[-1] # indeks terakhir
-            closest_b = distances[-2] # indeks ke dua dari akhir
+            closest_a = distances[-1]  # indeks terakhir
+            closest_b = distances[-2]  # indeks ke dua dari akhir
 
             # Determine if this square is the top left QR code indicator
-            if max(closest_a, closest_b) < cv2.arcLength(square, True) * 2.5 and math.fabs(closest_a - closest_b) / max(closest_a, closest_b) <= DISTANCE_TOLERANCE:
+            if max(closest_a, closest_b) < cv2.arcLength(square, True) * 2.5 and math.fabs(closest_a - closest_b) / max(
+                    closest_a, closest_b) <= DISTANCE_TOLERANCE:
                 # Determine placement of other indicators (even if code is rotated)
                 angle_a = get_angle(get_center(distances_to_contours[closest_a]), center)
                 angle_b = get_angle(get_center(distances_to_contours[closest_b]), center)
@@ -202,49 +227,57 @@ def extract(frame, debug=False):
                 else:
                     east = distances_to_contours[closest_b]
                     south = distances_to_contours[closest_a]
-                
+
                 midpoint = get_midpoint(get_center(east), get_center(south))
                 # Determine location of fourth corner
                 diagonal = peri / 4 * 1.41421
 
                 # temporary
-                main_box = get_center(square) 
+                main_box = get_center(square)
                 east_box = get_center(east)
                 south_box = get_center(south)
-                
+
                 # determine the x, y and center of the qr code
+                global qr_center
                 left, right, qr_center = get_box(east_box, south_box, east, south)
 
                 # Append rectangle, offsetting to farthest borders
-                rectangles.append([extend(midpoint, center, diagonal / 2, True), extend(midpoint, get_center(distances_to_contours[closest_b]), diagonal / 2, True), extend(midpoint, get_center(distances_to_contours[closest_a]), diagonal / 2, True)])
+                rectangles.append([extend(midpoint, center, diagonal / 2, True),
+                                   extend(midpoint, get_center(distances_to_contours[closest_b]), diagonal / 2, True),
+                                   extend(midpoint, get_center(distances_to_contours[closest_a]), diagonal / 2, True)])
                 east_corners.append(east)
                 south_corners.append(south)
                 main_corners.append(square)
                 # print a text
-                cv2.putText(output, "Main", main_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
-                cv2.putText(output, "East", east_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
-                cv2.putText(output, "South", south_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
+                cv2.putText(output, "Main", main_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(output, "East", east_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(output, "South", south_box, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
                 # draw qr code details
-                cv2.rectangle(output, left, right, (255,255,255), 2)
-                cv2.circle(output, qr_center, 10, (255,255,255), cv2.FILLED)
-                cv2.putText(output, "Center", qr_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1, cv2.LINE_AA)
+                cv2.rectangle(output, left, right, (255, 255, 255), 2)
+                cv2.circle(output, qr_center, 10, (255, 255, 255), cv2.FILLED)
+                cv2.putText(output, "Center", qr_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
 
-                print("Width : {}, height : {}".format(math.fabs(left[0]-right[0]), math.fabs(left[1]-right[1])))
+                # width and height contour
+                global contour_width, contour_height
+                contour_width = math.fabs(left[0] - right[0])
+                contour_height = math.fabs(left[1] - right[1])
+                # print("Width : {}, height : {}".format(width, height))
 
                 # get direction for the drone
-                direction = get_direction(center_image, qr_center)
-                print("{}".format(direction))
+                # direction = get_direction() # this function need image_center and qr center
+                # print("{}".format(direction))
 
     # print(type(np.array(main_corners)))
     # print(len(squares))
     if debug:
         # Draw debug information onto frame before outputting it
-        cv2.drawContours(output, squares, -1, (255,255,255), 4) #(5, 5, 5), 2)
+        cv2.drawContours(output, squares, -1, (255, 255, 255), 4)  # (5, 5, 5), 2)
         cv2.drawContours(output, main_corners, -1, (0, 0, 128), 3)
         cv2.drawContours(output, east_corners, -1, (0, 128, 0), 3)
         cv2.drawContours(output, south_corners, -1, (128, 0, 0), 3)
 
-    return output
+    return output, detected
+
 
 """
 # note
