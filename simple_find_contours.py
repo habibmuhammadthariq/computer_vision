@@ -132,16 +132,22 @@ def get_direction(): # this function need both image_center and qr_center
         elif image_center[0] < qr_center[0] - 50:
             direction = "right"
         elif image_center[1] > qr_center[1] + 50:
-            direction = "down"
-        elif image_center[1] < qr_center[1] - 50:
             direction = "up"
+        elif image_center[1] < qr_center[1] - 50:
+            direction = "down"
         else:
             direction = "hover"
 
-    return direction, distance
+    # print the direction and distance on the frame
+    cv2.putText(output, f"distance : {distance}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 1,
+                cv2.LINE_AA)
+    cv2.putText(output, f"direction : {direction}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 1,
+                cv2.LINE_AA)
+    return direction
 
 
 def extract(frame, debug=False):
+    global output
     output = frame.copy()
     # get center image and draw solid circle at it
     global image_center
