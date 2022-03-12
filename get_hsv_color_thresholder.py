@@ -10,7 +10,8 @@ def nothing(x):
     pass
 
 #load an image
-image = cv2.imread("../tello_course/img/red_circle.jpg")
+#image = cv2.imread("../tello_course/img/red_circle.jpg")
+image = cv2.imread("img/blue_circle_at_night.png")
 #create a window
 cv2.namedWindow("image")
 
