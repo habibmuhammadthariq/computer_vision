@@ -8,7 +8,7 @@ while 1:
 
     #take a picture on every single loop. 
     #the end of the video will be our final picture
-    cv2.imwrite("img/circle.jpg", img)
+    cv2.imwrite("../tello_course/img/circle.jpg", img)
 
     #show image streaming in a window
     cv2.imshow("Streaming", img)

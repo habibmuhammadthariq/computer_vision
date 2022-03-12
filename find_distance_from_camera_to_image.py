@@ -56,7 +56,7 @@ def compute_focal_length():
     marker = finding_object(image)
     focal_length = (marker[1][0]*known_distance) / known_width
 
-    print "Focal length : {}".format(focal_length)
+    print ("Focal length : {}".format(focal_length))
     return focal_length,known_width
 
 
@@ -64,12 +64,12 @@ def compute_focal_length():
 #get focal length and known width of the marker
 focal_length,known_width = compute_focal_length()
 #load image
-image = cv2.imread("img/circle.jpg")
+image = cv2.imread("../tello_course/img/circle.jpg")
 #finding marker
 marker = finding_object(image)
 #calculate distance from camera to the marker
 distance = distance_to_camera(known_width, focal_length, marker[1][0])
 #print out the distance
-print "Distance between marker to the camera was : {}".format(distance)
+print ("Distance between marker to the camera was : {}".format(distance))
 
 
